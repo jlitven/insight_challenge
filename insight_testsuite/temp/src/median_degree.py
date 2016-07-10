@@ -54,26 +54,13 @@ class VenmoGraph():
             # Remove edges older than the window
             threshold_time = edge.created_time - timedelta(seconds=self.window_seconds)
             remove_indices = []
-            # TODO: Make this more efficient
             for count, e in enumerate(self.edges[::-1]):
                 if e.created_time < threshold_time:
                     remove_index = len(self.edges) - count - 1
                     remove_indices.append(remove_index)
-            #     else:
-            #         break
-            # for count, e in enumerate(self.edges):
-            #     if e.created_time < threshold_time:
-            #         remove_index = count
-            #         remove_indices.append(remove_index)
-
-            print remove_indices
-
             for index in remove_indices:
                 self.remove_edge(index)
-
         self.edges.append(edge)
-        # bubble down to correct order
-
         for vertex in edge.vertices:
             if vertex not in self.degrees:
                 self.degrees[vertex] = 1
@@ -83,9 +70,8 @@ class VenmoGraph():
                 self.degree_buckets[degree] -= 1
                 self.degree_buckets[degree + 1] += 1
                 self.degrees[vertex] += 1
-
         # TODO: Make this more efficient
-        #self.edges.sort(key=lambda e: e.created_time)
+        self.edges.sort(key=lambda e: e.created_time)
 
     def get_value(self, index):
         """Return the value from the buckets."""
@@ -97,7 +83,6 @@ class VenmoGraph():
                 return key
             else:
                 bucket_index += val
-        pdb.set_trace()
 
     def remove_edge(self, index):
         """Remove the edge from the graph, and any disconnected vertices."""
