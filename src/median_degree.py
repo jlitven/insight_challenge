@@ -13,6 +13,7 @@ from collections import defaultdict
 from datetime import datetime
 from datetime import timedelta
 import json
+import pdb
 
 class Edge():
     """Represent an edge in a venmo graph."""
@@ -33,7 +34,11 @@ class Edge():
 
     def vertices(self):
         """Return the vertices."""
-        return self.v1, self.v2
+        return sorted((self.v1, self.v2))
+
+    def __str__(self):
+        """String representation of the edge."""
+        return str(self.vertices())
 
 class VenmoGraph():
     """
@@ -51,17 +56,18 @@ class VenmoGraph():
     """
     def __init__(self):
         """Create a Venmo Graph."""
-        self.edges = []
-        self.edge_dict = {}
+        self.edges_new = defaultdict(list)
         self.degrees = {}
         self.degree_buckets = defaultdict(int)
         self.window_seconds = 60
+        self._newest_time = datetime.min
 
     def __str__(self):
-        """Format the graph's edges as a string."""
-        result = 'Edges:\n'
-        for e in self.edges:
-            result += '{} - {} ({})\n'.format(e.v1, e.v2, e.created_time)
+        """String representation of the graph."""
+        result = ''
+        for vertex, v_edges in self.edges_new.iteritems():
+            v_edges_s = [str(e) for e in v_edges]
+            result += '{}: {}\n'.format(vertex, v_edges_s)
         return result
 
     def add_edge(self, edge):
@@ -72,23 +78,13 @@ class VenmoGraph():
             return
 
         if edge.created_time > self.newest_time():
+            #  TODO: Check for duplicate edges
+            self._newest_time = edge.created_time
             time_delta = timedelta(seconds=self.window_seconds)
             threshold_time = edge.created_time - time_delta
             self._remove_edges(threshold_time)
 
-        self._insert_edge(edge)
         self._update_degrees_add(edge)
-
-    def _insert_edge(self, edge):
-        """
-        Insert edge into the correct position, ordered by time.
-        """
-        insert_index = len(self.edges)
-        for g_edge in reversed(self.edges):
-            if edge.created_time > g_edge.created_time or insert_index == 0:
-                break
-            insert_index -= 1
-        self.edges.insert(insert_index, edge)
 
     def _update_degrees_add(self, edge):
         """
@@ -99,41 +95,43 @@ class VenmoGraph():
         Otherwise increase the degree by 1.
         """
         for vertex in edge.vertices():
-            if vertex not in self.degrees:
-                self.degrees[vertex] = 1
+            if vertex not in self.edges_new:
+                self.edges_new[vertex] = [edge]
                 self.degree_buckets[1] += 1
             else:
-                degree = self.degrees[vertex]
-                self.degree_buckets[degree] -= 1
-                self.degree_buckets[degree + 1] += 1
-                self.degrees[vertex] += 1
+                v_edges = self.edges_new[vertex]
+                index = len(v_edges)
+                for v_edge in reversed(v_edges):
+                    if edge.created_time > v_edge.created_time or index == 0:
+                        break
+                    index -= 1
+                v_edges.insert(index, edge)
+
+                # update degrees
+                degree = len(v_edges)
+                self.degree_buckets[degree - 1] -= 1
+                self.degree_buckets[degree] += 1
 
     def _remove_edges(self, threshold_time):
         """
         Remove all edges below and including the threshold time and
         update vertex degrees.
         """
-        start_index = 0
-        for index, edge in enumerate(self.edges):
-            if edge.created_time <= threshold_time:
-                self._update_degrees_remove(edge)
-                start_index = index + 1
-
-        self.edges = self.edges[start_index:]
-
-    def _update_degrees_remove(self, edge):
-        """
-        Update the degrees of the vertices connected to the edge
-        once it is removed.
-        """
-        for vertex in edge.vertices():
-            degree = self.degrees[vertex]
-            self.degree_buckets[degree] -= 1
-            self.degrees[vertex] -= 1
-            if self.degrees[vertex] == 0:
-                del self.degrees[vertex]
-            else:
-                self.degree_buckets[degree - 1] += 1
+        #  TODO: Parallelize
+        for vertex in self.edges_new.keys():
+            start_index = 0
+            v_edges = self.edges_new[vertex]
+            degree = len(v_edges)
+            for index, edge in enumerate(v_edges):
+                if edge.created_time <= threshold_time:
+                    self.degree_buckets[degree] -= 1
+                    if degree > 1:
+                        self.degree_buckets[degree - 1] += 1
+                    degree -= 1
+                    start_index = index + 1
+            self.edges_new[vertex] = v_edges[start_index:]
+            if not self.edges_new[vertex]:
+                del self.edges_new[vertex]
 
     def get_degree(self, index):
         """Return the degree from the buckets."""
@@ -146,19 +144,16 @@ class VenmoGraph():
 
     def newest_time(self):
         """Return the newest created time of an edge."""
-        if not self.edges:
-            return datetime.min
-        return self.edges[-1].created_time
+        return self._newest_time
 
     def within_time_window(self, edge):
         """Return True if the time is within the graph's 60-second
         window or newer.
         """
-        if not self.edges:
+        if not self.edges_new:
             return True
 
-        newest_time = self.edges[-1].created_time
-        window_start = newest_time - timedelta(seconds=self.window_seconds)
+        window_start = self.newest_time() - timedelta(seconds=self.window_seconds)
         return edge.created_time > window_start
 
     def get_median_degree(self):
@@ -166,7 +161,7 @@ class VenmoGraph():
         Calculate the median degree of the vertices. Assumes the
         vertices are sorted.
         """
-        length = len(self.degrees)
+        length = len(self.edges_new)
         if not length:
             return None
 
