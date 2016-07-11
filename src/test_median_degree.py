@@ -11,7 +11,6 @@ Unit tests for median_degree.
 import unittest
 from datetime import datetime, timedelta
 from median_degree import Edge, VenmoGraph, create_edge
-import pdb
 
 def create_basic_edge(v1='v1', v2='v2', date_str='2016-03-28T23:25:21Z'):
     """Create an edge with a given date string."""
