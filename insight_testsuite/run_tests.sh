@@ -89,7 +89,7 @@ function run_all_tests {
 }
 
 function run_unit_tests {
-  bash unit_tests.sh
+  bash run_unit_tests.sh
 }
 
 check_project_struct

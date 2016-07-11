@@ -9,7 +9,6 @@ Unit tests for median_degree.
 """
 
 import unittest
-import copy
 from datetime import datetime, timedelta
 from median_degree import Edge, VenmoGraph, create_edge
 
@@ -92,7 +91,7 @@ class TestVenmoGraph(unittest.TestCase):
         graph = create_basic_venmograph()
         edge = create_basic_edge()
         newest_time = graph.newest_time()
-        time_delta = timedelta(seconds=graph.window_seconds)
+        time_delta = timedelta(seconds=graph.window_seconds - 1)
         edge.created_time = newest_time - time_delta
         graph.add_edge(edge)
 

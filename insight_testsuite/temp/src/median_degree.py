@@ -12,7 +12,6 @@ import sys
 from collections import defaultdict
 from datetime import datetime
 from datetime import timedelta
-import pdb
 import json
 
 class Edge():
@@ -108,12 +107,12 @@ class VenmoGraph():
 
     def _remove_edges(self, threshold_time):
         """
-        Remove all edges below the threshold time and
+        Remove all edges below and including the threshold time and
         update vertex degrees.
         """
         start_index = 0
         for index, edge in enumerate(self.edges):
-            if edge.created_time < threshold_time:
+            if edge.created_time <= threshold_time:
                 self._update_degrees_remove(edge)
                 start_index = index + 1
 
@@ -157,7 +156,7 @@ class VenmoGraph():
 
         newest_time = self.edges[-1].created_time
         window_start = newest_time - timedelta(seconds=self.window_seconds)
-        return edge.created_time >= window_start
+        return edge.created_time > window_start
 
     def get_median_degree(self):
         """
@@ -191,11 +190,16 @@ def gen_median_degrees(input_file):
     graph = VenmoGraph()
 
     with open(input_file, 'r') as source:
-        for line in source:
+        for i, line in enumerate(source):
             transaction = json.loads(line)
-            edge = create_edge(transaction)
-            graph.add_edge(edge)
-            yield graph.get_median_degree()
+            try:
+                edge = create_edge(transaction)
+                graph.add_edge(edge)
+            except:
+                print ('WARNING: Transaction on line {} '
+                       'could not be processed:{}'.format(i, transaction))
+            else:
+                yield graph.get_median_degree()
 
 def main():
     """Write the degree median of a source Venmo Graph to file."""
