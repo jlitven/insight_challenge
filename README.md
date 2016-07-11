@@ -15,7 +15,7 @@ For more details check out their [Github page](https://github.com/InsightDataSci
 ## Implementation
 To solve this challenge we define a VenmoGraph object, which stores the state of the Venmo user's relationships in the 60-second time window.  When a transaction between users is processed, the corresponding edge is added to the graph if it falls within the time window. Edges outside the time window are then removed. The degrees of the vertices are updated and the rolling median is computed.
 
-To ensure efficiency, the edges are ordered by time so the oldest edges are easily found and removed. Additionally, vertex degrees are hashed using two dictionaries: One storing the degree of each vertex, and one storing the number of vertices with a given degree. These result in efficient updates and calculation of the median.
+To ensure efficiency, the edge lists are ordered by time so the oldest edges are easily found and removed. Each edge list is hashed by its vertices for fast lookup and checking for duplicates. Additionally, vertex degrees are stored in buckets counting the number of vertices with a given degree. This results in efficient updates and calculation of the median.
 
 My solution is implemented in Python.
 ## Testing

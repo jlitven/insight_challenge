@@ -73,8 +73,8 @@ class TestVenmoGraph(unittest.TestCase):
         edge.created_time = edge.created_time + time_delta
         graph.add_edge(edge)
         print str(graph)
-        self.assertEqual(len(graph.edges_new['v1']), 2)
-        self.assertEqual(len(graph.edges_new['v2']), 1)
+        self.assertEqual(len(graph.edges['v1']), 2)
+        self.assertEqual(len(graph.edges['v2']), 1)
 
         # add edge so previous edges are outside time window
         newest_time = graph.newest_time()
@@ -83,8 +83,8 @@ class TestVenmoGraph(unittest.TestCase):
         edge.created_time = newest_time + time_delta
         graph.add_edge(edge)
 
-        self.assertEqual(len(graph.edges_new['v2']), 1)
-        self.assertEqual(len(graph.edges_new['bob']), 1)
+        self.assertEqual(len(graph.edges['v2']), 1)
+        self.assertEqual(len(graph.edges['bob']), 1)
 
     def test_add_edge_inside_window(self):
         """Test adding an edge inside the current time window."""
@@ -95,9 +95,8 @@ class TestVenmoGraph(unittest.TestCase):
         edge.created_time = newest_time - time_delta
         graph.add_edge(edge)
 
-        self.assertEqual(len(graph.edges_new['v1']), 2)
-        self.assertEqual(len(graph.edges_new['v2']), 1)
-        # self.assertLess(graph.edges[0].created_time, graph.edges[1].created_time)
+        self.assertEqual(len(graph.edges['v1']), 2)
+        self.assertEqual(len(graph.edges['v2']), 1)
 
     def test_add_edge_before_window(self):
         """Test adding an edge before the current time window."""
@@ -107,9 +106,8 @@ class TestVenmoGraph(unittest.TestCase):
         time_delta = timedelta(seconds=graph.window_seconds + 1)
         edge.created_time = newest_time - time_delta
 
-        #  self.assertEqual(len(graph.edges), 1)
-        self.assertEqual(len(graph.edges_new['v1']), 1)
-        self.assertEqual(len(graph.edges_new['v2']), 1)
+        self.assertEqual(len(graph.edges['v1']), 1)
+        self.assertEqual(len(graph.edges['v2']), 1)
 
     def test_get_degree(self):
         """Test get_degree with different graphs."""
@@ -135,9 +133,6 @@ class TestVenmoGraph(unittest.TestCase):
     def test_newest_time(self):
         """Test newest_time with different graphs."""
         graph = create_basic_venmograph()
-
-        #  self.assertEqual(graph.newest_time(),
-        #                 graph.edges[0].created_time)
 
         # add edge so newest time does NOT change
         edge = create_basic_edge()
