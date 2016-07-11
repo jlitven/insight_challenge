@@ -88,6 +88,11 @@ function run_all_tests {
   echo "[$(date)] ${PASS_CNT} of ${NUM_TESTS} tests passed" >> ${GRADER_ROOT}/results.txt
 }
 
+function run_unit_tests {
+  bash unit_tests.sh
+}
+
 check_project_struct
+run_unit_tests
 run_all_tests
 

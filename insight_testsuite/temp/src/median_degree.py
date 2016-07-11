@@ -23,15 +23,18 @@ class Edge():
         Input:
         v1 - A vertex in the graph
         v2 - A vertex in the graph
-        date_str - A time stamp, with format YYYY-MM-DDTHH:MM:SSZ
+        date_str - A time stamp, with format YYYY-MM-DDThh:mm:ssZ
                     e.g. 2016-03-28T23:25:21Z
         Output:
             An edge
         """
         self.v1 = v1
         self.v2 = v2
-        self.vertices = (v1, v2)
         self.created_time = datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%SZ')
+
+    def vertices(self):
+        """Return the vertices."""
+        return self.v1, self.v2
 
 class VenmoGraph():
     """
@@ -63,10 +66,13 @@ class VenmoGraph():
         """
         Add the edge to the graph, and update the vertex degrees.
         """
+        if not self.within_time_window(edge):
+            return
+
         if edge.created_time > self.newest_time():
             time_delta = timedelta(seconds=self.window_seconds)
             threshold_time = edge.created_time - time_delta
-            self.remove_edges(threshold_time)
+            self._remove_edges(threshold_time)
 
         self._insert_edge(edge)
         self._update_degrees_add(edge)
@@ -79,7 +85,6 @@ class VenmoGraph():
         for g_edge in reversed(self.edges):
             if edge.created_time > g_edge.created_time or insert_index == 0:
                 break
-
             insert_index -= 1
         self.edges.insert(insert_index, edge)
 
@@ -91,7 +96,7 @@ class VenmoGraph():
         If a vertex is not in the graph, add it to the graph with degree 1.
         Otherwise increase the degree by 1.
         """
-        for vertex in edge.vertices:
+        for vertex in edge.vertices():
             if vertex not in self.degrees:
                 self.degrees[vertex] = 1
                 self.degree_buckets[1] += 1
@@ -101,7 +106,7 @@ class VenmoGraph():
                 self.degree_buckets[degree + 1] += 1
                 self.degrees[vertex] += 1
 
-    def remove_edges(self, threshold_time):
+    def _remove_edges(self, threshold_time):
         """
         Remove all edges below the threshold time and
         update vertex degrees.
@@ -119,7 +124,7 @@ class VenmoGraph():
         Update the degrees of the vertices connected to the edge
         once it is removed.
         """
-        for vertex in edge.vertices:
+        for vertex in edge.vertices():
             degree = self.degrees[vertex]
             self.degree_buckets[degree] -= 1
             self.degrees[vertex] -= 1
@@ -157,14 +162,19 @@ class VenmoGraph():
     def get_median_degree(self):
         """
         Calculate the median degree of the vertices. Assumes the
-        vertices are sorted."""
+        vertices are sorted.
+        """
         length = len(self.degrees)
+        if not length:
+            return None
+
         if length % 2 == 0:
             index = length / 2
-            return (self.get_degree(index) + self.get_degree(index - 1)) / 2.0
+            median = (self.get_degree(index) + self.get_degree(index - 1)) / 2.0
         else:
             index = (length - 1) / 2
-            return float(self.get_degree(index))
+            median = float(self.get_degree(index))
+        return median
 
 def create_edge(transaction):
     """Create an edge from a Venmo transaction."""
@@ -184,9 +194,7 @@ def gen_median_degrees(input_file):
         for line in source:
             transaction = json.loads(line)
             edge = create_edge(transaction)
-            # Ignore transactions outside the time window
-            if graph.within_time_window(edge):
-                graph.add_edge(edge)
+            graph.add_edge(edge)
             yield graph.get_median_degree()
 
 def main():
