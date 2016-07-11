@@ -78,7 +78,6 @@ class VenmoGraph():
             return
 
         if edge.created_time > self.newest_time():
-            #  TODO: Check for duplicate edges
             self._newest_time = edge.created_time
             time_delta = timedelta(seconds=self.window_seconds)
             threshold_time = edge.created_time - time_delta
@@ -100,6 +99,12 @@ class VenmoGraph():
                 self.degree_buckets[1] += 1
             else:
                 v_edges = self.edges_new[vertex]
+                #  check for duplicates
+                for v_edge in v_edges:
+                    if v_edge.vertices() == edge.vertices():
+                        v_edges.remove(v_edge)
+                        break
+
                 index = len(v_edges)
                 for v_edge in reversed(v_edges):
                     if edge.created_time > v_edge.created_time or index == 0:
@@ -117,7 +122,6 @@ class VenmoGraph():
         Remove all edges below and including the threshold time and
         update vertex degrees.
         """
-        #  TODO: Parallelize
         for vertex in self.edges_new.keys():
             start_index = 0
             v_edges = self.edges_new[vertex]

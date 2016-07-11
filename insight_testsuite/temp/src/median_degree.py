@@ -100,6 +100,12 @@ class VenmoGraph():
                 self.degree_buckets[1] += 1
             else:
                 v_edges = self.edges_new[vertex]
+                #  check for duplicates
+                for v_edge in v_edges:
+                    if v_edge.vertices() == edge.vertices():
+                        v_edges.remove(v_edge)
+                        break
+
                 index = len(v_edges)
                 for v_edge in reversed(v_edges):
                     if edge.created_time > v_edge.created_time or index == 0:
