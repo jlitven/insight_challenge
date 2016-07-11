@@ -126,6 +126,8 @@ class VenmoGraph():
                         self.degree_buckets[degree - 1] += 1
                     degree -= 1
                     start_index = index + 1
+                else:
+                    break
             self.edges[vertex] = v_edges[start_index:]
             if not self.edges[vertex]:
                 del self.edges[vertex]
